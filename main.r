@@ -56,7 +56,7 @@ map_and_data <- inner_join(data, mymap)
 ggplot(data= map_and_data) + geom_sf(aes(fill = incidence_1))
 
 
-############ S1 Data, univariate chloropleth 
+############ S1 Data, univariate Choropleth 
 
 # importing the data from data2.csv
 data <- readr::read_delim(file = "data2.csv", delim = ":",col_names = FALSE)

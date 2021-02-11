@@ -38,25 +38,6 @@ library(pals)
 
 
 # ################################### BEGINNING OF SCRIPT #######################################
-############ L1 Data
-
-# importing the data from the csv
-data <- readr::read_delim(file = "data.csv", delim = ":",col_names = FALSE)
-
-# formatting the date correctly
-data <- data.frame(wilaya = data$X1, incidence_1= data$X2, incidence_2= data$X3)
-
-# importing the map from the shapefiles
-mymap <- st_read("dz_map/dzaBound.shp")
-
-names(mymap)[names(mymap) == "NAME_2"] <- "wilaya"
-
-map_and_data <- inner_join(data, mymap)
-
-ggplot(data= map_and_data) + geom_sf(aes(fill = incidence_1))
-
-
-############ S1 Data, univariate chloropleth 
 
 # importing the data from data2.csv
 data <- readr::read_delim(file = "data2.csv", delim = ":",col_names = FALSE)
@@ -72,18 +53,66 @@ names(mymap)[names(mymap) == "nam"] <- "wilaya"
 
 map_and_data <- inner_join(data, mymap)
 
-# Basic Map draw
-ggplot(data = mymap) + geom_sf() + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(color = "black", fill = "red")
-
-# sting map
-ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(aes(geometry = geometry, fill = sting)) + scale_fill_viridis_c(option = "viridis", trans="sqrt", begin = 0.3, end = 0.7)
 
 
-# incidence map
-ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(aes(geometry = geometry, fill = incidence)) + scale_fill_viridis_c(option = "plasma", trans="sqrt", begin = 0.2, end = 0.6)
+# bivariate sting and death map
 
+# calculate the quartiles for the death data
+quantiles_deaths <- quantile(data$deaths, probs= seq(0, 1, length.out= 4), na.rm=TRUE)
 
+# calculate the quartiles for the sting data
+quantiles_stings <- quantile(data$sting, probs= seq(0, 1, length.out= 4), na.rm=TRUE)
 
+# Bivariate color scale setup
+palette_matrix <- brewer.seqseq2() # brewer.seqseq2 is a bivariate palette that resists color blindness
+# palette_matrix <- stevens.bluered()
+
+color_index_grid <- 
+  expand.grid(deaths_palette=c(1,2,3),stings_palette=c(1,2,3)) %>% # create 1,2,3 pairs in data.frame
+  arrange(desc(row_number())) # reverse the order to fit the color palette
+
+# calculate the color grid
+color_scale_grid <- data.frame(group=paste(color_index_grid$deaths_palette, "-", color_index_grid$stings_palette), fill= palette_matrix)
+
+geo_bivariate_data <- map_and_data
+
+geo_bivariate_data %<>% 
+  mutate(
+    deaths_quantiles= cut(
+      geo_data$deaths,
+      breaks = quantiles_deaths,
+      include.lowest = TRUE
+    ),
+    
+    sting_quantiles = cut(
+      geo_data$sting,
+      breaks = quantiles_stings,
+      include.lowest = TRUE
+    ),
+    group = paste(
+      as.numeric(deaths_quantiles), "-",
+      as.numeric(sting_quantiles)
+    )
+  ) %>% left_join(color_scale_grid, by="group")
+
+  data_map <- ggplot(data= geo_bivariate_data) +
+    geom_sf(aes(geometry=geometry, fill=fill)) +
+    scale_fill_identity()
+  
+  color_scale_grid %<>%
+    separate(group, into = c("sting", "deaths"), sep = " - ") %>%
+    mutate(sting = as.integer(sting),
+           deaths = as.integer(deaths))
+  
+  legend <- ggplot() +
+    geom_tile(
+      data= color_scale_grid,
+      mapping =aes(
+        x = sting,
+        y = deaths,
+        fill = fill
+      )
+    ) + scale_fill_identity() + labs(x = "Higher inequality ⟶️",y = "Higher income ⟶️")
 # ################################### END OF SCRIPT #############################################
 
 # Clear environment

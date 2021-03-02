@@ -28,14 +28,18 @@ if(!require(readr)){install.packages("readr")}
 # package to generate bivariate color palettes
 if(!require(readr)){install.packages("pals")}
 
+if(!require(cowplot)){install.packages("cowplot")}
+
 library(sf)
+library(tmap)
 library(ggplot2)
 library(tmap)
 library(leaflet)
 library(dplyr)
 library(readr)
 library(pals)
-
+library(tidyr)
+library(cowplot)
 
 # ################################### BEGINNING OF SCRIPT #######################################
 
@@ -51,41 +55,48 @@ mymap <- st_read("dz_map/dzaBound.shp")
 # correct labeling
 names(mymap)[names(mymap) == "nam"] <- "wilaya"
 
+# clean the data from missing data
+data <- data %>% filter(!is.na(sting), !is.na(deaths))
+
 map_and_data <- inner_join(data, mymap)
 
+# data$deaths[is.na(data$deaths)]<- 0
+# data$sting[is.na(data$sting)]<- 0
 
+# data$deaths[data$deaths==0]<- mean(data$deaths)
+# data$sting[data$sting==0]<- mean(data$sting)
 
 # bivariate sting and death map
 
 # calculate the quartiles for the death data
-quantiles_deaths <- quantile(data$deaths, probs= seq(0, 1, length.out= 4), na.rm=TRUE)
+quantiles_deaths <- quantile(data$deaths, probs= seq(0, 1, length.out= 4))
 
 # calculate the quartiles for the sting data
-quantiles_stings <- quantile(data$sting, probs= seq(0, 1, length.out= 4), na.rm=TRUE)
+quantiles_stings <- quantile(data$sting, probs= seq(0, 1, length.out= 4))
 
 # Bivariate color scale setup
 palette_matrix <- brewer.seqseq2() # brewer.seqseq2 is a bivariate palette that resists color blindness
 # palette_matrix <- stevens.bluered()
 
 color_index_grid <- 
-  expand.grid(deaths_palette=c(1,2,3),stings_palette=c(1,2,3)) %>% # create 1,2,3 pairs in data.frame
-  arrange(desc(row_number())) # reverse the order to fit the color palette
+  expand.grid(deaths_palette=c(1,2,3),stings_palette=c(1,2,3)) # create 1,2,3 pairs in data.frame
+  # arrange(desc(row_number())) # reverse the order to fit the color palette
 
 # calculate the color grid
-color_scale_grid <- data.frame(group=paste(color_index_grid$deaths_palette, "-", color_index_grid$stings_palette), fill= palette_matrix)
+color_scale_grid <- data.frame(group=paste(color_index_grid$deaths_palette, "-", color_index_grid$stings_palette), fill= palette_matrix, deaths=color_index_grid$deaths_palette, sting=color_index_grid$stings_palette)
 
 geo_bivariate_data <- map_and_data
 
 geo_bivariate_data %<>% 
   mutate(
     deaths_quantiles= cut(
-      geo_data$deaths,
+      geo_bivariate_data$deaths,
       breaks = quantiles_deaths,
       include.lowest = TRUE
     ),
     
     sting_quantiles = cut(
-      geo_data$sting,
+      geo_bivariate_data$sting,
       breaks = quantiles_stings,
       include.lowest = TRUE
     ),
@@ -94,15 +105,26 @@ geo_bivariate_data %<>%
       as.numeric(sting_quantiles)
     )
   ) %>% left_join(color_scale_grid, by="group")
-
+  
+  # import theme
+source("theme.r")
+  # default_caption <- "hhauiehfauhf" 
   data_map <- ggplot(data= geo_bivariate_data) +
     geom_sf(aes(geometry=geometry, fill=fill)) +
-    scale_fill_identity()
+    scale_fill_identity() +
+    labs(x = NULL,
+         y = NULL,
+         title = "Algeria's regional Stings By Death",
+         subtitle = paste0("scorpion stings by deaths",
+                           "2020"),
+         caption = "") +
+    geom_sf_label(aes(geometry=geometry, label = wilaya)) +
+    theme_map()
   
-  color_scale_grid %<>%
-    separate(group, into = c("sting", "deaths"), sep = " - ") %>%
-    mutate(sting = as.integer(sting),
-           deaths = as.integer(deaths))
+  # color_scale_grid %<>%
+  #   separate(group, into = c("sting", "deaths"), sep = "-") %>%
+  #   mutate(sting = as.integer(sting),
+  #          deaths = as.integer(deaths))
   
   legend <- ggplot() +
     geom_tile(
@@ -112,8 +134,13 @@ geo_bivariate_data %<>%
         y = deaths,
         fill = fill
       )
-    ) + scale_fill_identity() + labs(x = "Higher inequality ⟶️",y = "Higher income ⟶️")
-# ################################### END OF SCRIPT #############################################
+    ) + scale_fill_identity() + labs(x = "Higher Sting ⟶️",y = "Higher Deaths ⟶️")
+  
+  ggdraw() +
+    draw_plot(data_map, 0, 0, 1, 1) +
+    draw_plot(legend, 0.05, 0.05, 0.2, 0.3)
+
+  # ################################### END OF SCRIPT #############################################
 
 # Clear environment
 rm(list = ls()) 

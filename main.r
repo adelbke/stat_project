@@ -38,23 +38,6 @@ library(pals)
 
 
 # ################################### BEGINNING OF SCRIPT #######################################
-############ L1 Data
-
-# importing the data from the csv
-data <- readr::read_delim(file = "data.csv", delim = ":",col_names = FALSE)
-
-# formatting the date correctly
-data <- data.frame(wilaya = data$X1, incidence_1= data$X2, incidence_2= data$X3)
-
-# importing the map from the shapefiles
-mymap <- st_read("dz_map/dzaBound.shp")
-
-names(mymap)[names(mymap) == "NAME_2"] <- "wilaya"
-
-map_and_data <- inner_join(data, mymap)
-
-ggplot(data= map_and_data) + geom_sf(aes(fill = incidence_1))
-
 
 ############ S1 Data, univariate Choropleth 
 
@@ -72,15 +55,17 @@ names(mymap)[names(mymap) == "nam"] <- "wilaya"
 
 map_and_data <- inner_join(data, mymap)
 
+source("theme.r")
+
 # Basic Map draw
-ggplot(data = mymap) + geom_sf() + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(color = "black", fill = "red")
+# ggplot(data = mymap) + geom_sf() + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(color = "black", fill = "red") 
 
 # sting map
-ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(aes(geometry = geometry, fill = sting)) + scale_fill_viridis_c(option = "viridis", trans="sqrt", begin = 0.3, end = 0.7)
+ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria sting Choropleth") + geom_sf(aes(geometry = geometry, fill = sting)) + scale_fill_viridis_c(option = "viridis", trans="sqrt", begin = 0.3, end = 0.7) + theme_map()
 
 
 # incidence map
-ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(aes(geometry = geometry, fill = incidence)) + scale_fill_viridis_c(option = "plasma", trans="sqrt", begin = 0.2, end = 0.6)
+ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria incidence Choropleth") + geom_sf(aes(geometry = geometry, fill = incidence)) + scale_fill_viridis_c(option = "plasma", trans="sqrt", begin = 0.2, end = 0.6) + theme_map()
 
 
 

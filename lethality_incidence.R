@@ -56,82 +56,81 @@ mymap <- st_read("dz_map/dzaBound.shp")
 names(mymap)[names(mymap) == "nam"] <- "wilaya"
 
 # clean the data from missing data
-clean_data <- data %>% filter(!is.na(sting), !is.na(deaths))
+clean_data <- data %>% filter(!is.na(lethality), !is.na(incidence))
 
 map_and_data <- inner_join(clean_data, mymap)
 
 
-# calculate the quartiles for the death data
-quantiles_deaths <- quantile(map_and_data$deaths, probs= seq(0, 1, length.out= 4))
+# calculate the quartiles for the lethality data
+quantiles_lethality <- quantile(map_and_data$lethality, probs= seq(0, 1, length.out= 4))
 
-# calculate the quartiles for the sting data
-quantiles_stings <- quantile(map_and_data$sting, probs= seq(0, 1, length.out= 4))
+# calculate the quartiles for the incidence data
+quantiles_incidence <- quantile(map_and_data$incidence, probs= seq(0, 1, length.out= 4))
 
-# Bivariate color scale setup
-palette_matrix <- brewer.seqseq2() # brewer.seqseq2 is a bivariate palette that resists color blindness
-# palette_matrix <- stevens.bluered()
+# Prepare the color palette
 
-color_index_grid <- 
-  expand.grid(deaths_palette=c(1,2,3),stings_palette=c(1,2,3)) # create 1,2,3 pairs in data.frame
+  # Bivariate color scale setup
+  palette_matrix <- brewer.seqseq2() # brewer.seqseq2 is a bivariate palette that resists color blindness
+  
+  color_index_grid <- 
+    expand.grid(lethality_palette=c(1,2,3),incidence_palette=c(1,2,3)) # create 1,2,3 pairs in data.frame
   # arrange(desc(row_number())) # reverse the order to fit the color palette
 
-# calculate the color grid
-color_scale_grid <- data.frame(group=paste(color_index_grid$deaths_palette, "-", color_index_grid$stings_palette), fill= palette_matrix, deaths=color_index_grid$deaths_palette, sting=color_index_grid$stings_palette)
-
-geo_bivariate_data <- map_and_data
-
-geo_bivariate_data %<>% 
-  mutate(
-    deaths_quantiles= cut(
-      geo_bivariate_data$deaths,
-      breaks = quantiles_deaths,
-      include.lowest = TRUE
-    ),
-    
-    sting_quantiles = cut(
-      geo_bivariate_data$sting,
-      breaks = quantiles_stings,
-      include.lowest = TRUE
-    ),
-    group = paste(
-      as.numeric(deaths_quantiles), "-",
-      as.numeric(sting_quantiles)
-    )
-  ) %>% left_join(color_scale_grid, by="group")
+  # calculate the color grid
+  color_scale_grid <- data.frame(group=paste(color_index_grid$lethality_palette, "-", color_index_grid$incidence_palette), fill= palette_matrix, lethality=color_index_grid$lethality_palette, incidence=color_index_grid$incidence_palette)  
   
-  # import theme
-source("theme.r") 
-  data_map <- ggplot(data= geo_bivariate_data) +
+
+# assign each line of data to a color
+  map_and_data %<>% 
+    mutate(
+      lethality_quantiles= cut(
+        map_and_data$lethality,
+        breaks = quantiles_lethality,
+        include.lowest = TRUE
+      ),
+      
+      incidence_quantiles = cut(
+        map_and_data$incidence,
+        breaks = quantiles_incidence,
+        include.lowest = TRUE
+      ),
+      group = paste(
+        as.numeric(lethality_quantiles), "-",
+        as.numeric(incidence_quantiles)
+      )
+    ) %>% left_join(color_scale_grid, by="group")
+
+# import theme
+  source("theme.r")
+
+# Draw map
+  data_map <- ggplot(data= map_and_data) +
     geom_sf(aes(geometry=geometry, fill=fill)) +
     scale_fill_identity() +
     labs(x = NULL,
          y = NULL,
-         title = "Algeria's regional Stings By Death",
-         subtitle = paste0("stings by deaths",
+         title = "Algeria's regional leathality and incidence",
+         subtitle = paste0("bivariate choropleth ",
                            ""),
          caption = "") +
-    geom_sf_label(aes(geometry=geometry, label = wilaya),size=2.25) +
+    geom_sf_label(aes(geometry=geometry, label = wilaya), size=2.25) +
     theme_map()
-  
-  # color_scale_grid %<>%
-  #   separate(group, into = c("sting", "deaths"), sep = "-") %>%
-  #   mutate(sting = as.integer(sting),
-  #          deaths = as.integer(deaths))
-  
+
+# Draw Legend
   legend <- ggplot() +
     geom_tile(
       data= color_scale_grid,
       mapping =aes(
-        x = sting,
-        y = deaths,
+        x = lethality,
+        y = incidence,
         fill = fill
       )
-    ) + scale_fill_identity() + labs(x = "Higher Sting ⟶️",y = "Higher Deaths ⟶️")
+    ) + scale_fill_identity() + labs(x = "Higher lethality ⟶️",y = "Higher incidence ⟶️")
   
   ggdraw() +
     draw_plot(data_map, 0, 0, 1, 1) +
     draw_plot(legend, 0.05, 0.05, 0.2, 0.3)
-
+  
   # ################################### END OF SCRIPT #############################################
 
 # Clear environment

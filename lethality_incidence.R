@@ -54,6 +54,8 @@ mymap <- st_read("dz_map/dzaBound.shp")
 
 # correct labeling
 names(mymap)[names(mymap) == "nam"] <- "wilaya"
+# consistent naming
+mymap$wilaya[mymap$wilaya=="M'SILA"] <- "MSILA"
 
 # clean the data from missing data
 clean_data <- data %>% filter(!is.na(lethality), !is.na(incidence))

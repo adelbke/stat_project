@@ -52,6 +52,8 @@ mymap <- st_read("dz_map/dzaBound.shp")
 
 # correct labeling
 names(mymap)[names(mymap) == "nam"] <- "wilaya"
+# consistent naming
+mymap$wilaya[mymap$wilaya=="M'SILA"] <- "MSILA"
 
 map_and_data <- inner_join(data, mymap)
 
@@ -61,11 +63,11 @@ source("theme.r")
 # ggplot(data = mymap) + geom_sf() + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria MAP") + geom_sf(color = "black", fill = "red") 
 
 # sting map
-ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria sting Choropleth") + geom_sf(aes(geometry = geometry, fill = sting)) + scale_fill_viridis_c(option = "viridis", trans="sqrt", begin = 0.3, end = 0.7) + theme_map()
+ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria sting by wilaya") + geom_sf(aes(geometry = geometry, fill = sting)) + scale_fill_viridis_c(option = "viridis", trans="sqrt", begin = 0.3, end = 0.7) + theme_map()
 
 
 # incidence map
-ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria incidence Choropleth") + geom_sf(aes(geometry = geometry, fill = incidence)) + scale_fill_viridis_c(option = "plasma", trans="sqrt", begin = 0.2, end = 0.6) + theme_map()
+ggplot(data = map_and_data) + xlab("Longitude") + ylab("Latitude") + ggtitle("Algeria incidence by wilaya") + geom_sf(aes(geometry = geometry, fill = incidence)) + scale_fill_viridis_c(option = "plasma", trans="sqrt", begin = 0.2, end = 0.6) + theme_map()
 
 
 

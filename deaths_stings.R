@@ -54,6 +54,7 @@ mymap <- st_read("dz_map/dzaBound.shp")
 
 # correct labeling
 names(mymap)[names(mymap) == "nam"] <- "wilaya"
+mymap$wilaya[mymap$wilaya=="M'SILA"] <- "MSILA"
 
 # clean the data from missing data
 clean_data <- data %>% filter(!is.na(sting), !is.na(deaths))
@@ -107,7 +108,7 @@ source("theme.r")
     labs(x = NULL,
          y = NULL,
          title = "Algeria's regional Stings By Death",
-         subtitle = paste0("stings by deaths",
+         subtitle = paste0("Algeria 20XX",
                            ""),
          caption = "") +
     geom_sf_label(aes(geometry=geometry, label = wilaya),size=2.25) +
